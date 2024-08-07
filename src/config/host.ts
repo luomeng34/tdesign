@@ -1,7 +1,7 @@
 export default {
   development: {
     // 开发环境接口请求
-    API: 'http://192.168.0.200:8888/api',
+    API: 'http://192.168.0.141:8888/api',
     // 开发环境 cdn 路径
     CDN: '',
   },

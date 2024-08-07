@@ -87,12 +87,17 @@ const actions = {
     commit('setUserInfo', res);
   },
   async logout({ commit }) {
-    commit('SET_TOKEN', '')
-    commit('removeToken');
-    localStorage.removeItem("userName")
-    localStorage.removeItem("userCode")
-    localStorage.removeItem("userType")
-    commit('setUserInfo', InitUserInfo);
+    logout().then(() => {
+      commit('SET_TOKEN', '')
+      commit('removeToken');
+      localStorage.removeItem("userName")
+      localStorage.removeItem("userCode")
+      localStorage.removeItem("userType")
+      commit('setUserInfo', InitUserInfo);
+    }).catch(error => {
+
+    })
+
   },
 };
 

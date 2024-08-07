@@ -4,6 +4,7 @@
       <template #logo>
         <span v-if="showLogo" class="header-logo-container" @click="handleNav('/dashboard/base')">
           <logo-full class="t-logo" />
+<!--          <img src="@/assets/logo.png" alt="" />-->
         </span>
         <div v-else class="header-operate-left">
           <t-button theme="default" shape="square" variant="text" @click="changeCollapsed">
@@ -80,6 +81,7 @@ import LogoFull from '@/assets/assets-logo-full.svg';
 import Notice from './Notice.vue';
 import Search from './Search.vue';
 import MenuContent from './MenuContent.vue';
+import store from "@/store";
 
 
 export default Vue.extend({
@@ -162,7 +164,8 @@ export default Vue.extend({
     toggleSettingPanel() {
       this.$store.commit('setting/toggleSettingPanel', true);
     },
-    handleLogout() {
+    async handleLogout() {
+      await this.$store.dispatch('user/logout', this.formData);
       this.$router.push(`/login?redirect=${this.$router.history.current.fullPath}`);
     },
     changeCollapsed() {

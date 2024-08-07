@@ -1,20 +1,23 @@
 <template>
   <div>
     <t-upload
-      v-model="fileList"
+      v-model="value"
       :action="actions"
       :tips="tip"
       :size-limit="limit"
       :before-upload="beforeUpload"
-      theme='image'
+      :theme='themeType'
       :showImageFileName="showImageFileName"
       @fail="handleFail"
+      :data="dataType"
       :headers="headers"
       :multiple="multiply"
+      :disabled="disabled"
+      :max="max"
       @success="onSuccess"
       @remove="onRemove"
       :imageViewerProps="imageViewerProps"
-      accept="image/*"
+      :accept="accept"
     >
 <!--      <t-button class="form-submit-upload-btn" variant="outline"> 上传合同文件 </t-button>-->
     </t-upload>
@@ -41,6 +44,26 @@ export default Vue.extend({
     multiply:{
       type: Boolean,
       default: false,
+    },
+    disabled:{
+      type: Boolean,
+      default: false,
+    },
+    max:{
+      type: Number,
+      default: 1,
+    },
+    accept:{
+      type:String,
+      default:"image/*"
+    },
+    themeType:{
+      type: String,
+      default:"image"
+    },
+    dataType:{
+      type: String,
+      default:"banner"
     }
   },
   watch: {
@@ -63,8 +86,8 @@ export default Vue.extend({
   },
   data(){
     return {
-      baseUrl: "http://192.168.0.200:8888/",
-      actions: "http://192.168.0.200:8888/api/upload/oss/uploadFile",
+      baseUrl: "http://192.168.0.141:8888/",
+      actions: "http://192.168.0.141:8888/api/upload/oss/uploadFile",
       headers: {
         token: getToken()
       },
@@ -75,7 +98,7 @@ export default Vue.extend({
       imageViewerProps: {
         closeOnEscKeydown: false,
       },
-      number:0,
+      number:0
     }
   },
   methods:{
@@ -84,19 +107,24 @@ export default Vue.extend({
     },
     beforeUpload(file) {
       // this.fileList = file.response.url
-      if (file.size > 10 * 1024 * 1024) {
-        this.$message.warning('上传的图片不能大于10M');
-        return false;
-      }
       this.number++;
-      return true;
 
+      return true;
     },
     onSuccess(res){
-      console.log('success',res);
-      if (res.response.code === 200) {
-        this.uploadList.push({ name: res.file.name, url: res.response.data });
-        this.uploadedSuccessfully();
+      let code = this.multiply?res.response[0].code:res.response.code
+      if (code === 200) {
+        console.log(this.multiply)
+        if(this.multiply){
+          res.response.forEach((item, index) => {
+            this.uploadList.push({ url: item.data });
+          })
+          this.number = res.response.length
+          this.uploadedSuccessfully();
+        }else{
+          this.uploadList.push({ name: res.file.name, url: res.response.data });
+          this.uploadedSuccessfully();
+        }
       } else {
         this.number--;
         this.uploadedSuccessfully();
@@ -112,9 +140,12 @@ export default Vue.extend({
     },
     // 上传结束处理
     uploadedSuccessfully() {
+      console.log(this.uploadList.length === this.number)
       if (this.number > 0 && this.uploadList.length === this.number) {
         this.fileList = this.uploadList;
-        this.uploadList = [];
+        if(!this.multiply){
+          this.uploadList = [];
+        }
         this.number = 0;
         this.$emit("uploadChange", this.fileList);
       }

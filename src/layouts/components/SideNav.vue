@@ -26,8 +26,10 @@
 import Vue from 'vue';
 import { prefix } from '@/config/global';
 import { ClassName } from '@/interface';
-import Logo from '@/assets/assets-t-logo.svg';
-import LogoFull from '@/assets/assets-logo-full.svg';
+// import Logo from '@/assets/assets-t-logo.svg';
+import Logo from '@/assets/logo.svg';
+import LogoFull from '@/assets/logo2.svg';
+// import LogoFull from '@/assets/assets-logo-full.svg';
 
 import MenuContent from './MenuContent.vue';
 import pgk from '../../../package.json';

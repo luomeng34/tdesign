@@ -137,7 +137,7 @@ instance.interceptors.response.use(res => {
           closeOnOverlayClick:false,
           onConfirm: ({ e }) => {
             isRelogin.show = false;
-            store.dispatch('logout').then(() => {
+            store.dispatch('user/logout').then(() => {
               location.href = '/index';
             })
             // 请求成功后，销毁弹框

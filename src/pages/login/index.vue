@@ -4,14 +4,14 @@
 
     <div class="login-container">
       <div class="title-container">
-        <h1 class="title margin-no">登录到</h1>
-        <h1 class="title">TDesign Starter</h1>
-        <div class="sub-title">
+<!--        <h1 class="title margin-no">登录到</h1>-->
+        <h1 class="title">欢迎登录到管理后台</h1>
+<!--        <div class="sub-title">
           <p class="tip">{{ type == 'register' ? '已有账号?' : '没有账号吗?' }}</p>
           <p class="tip" @click="switchType(type == 'register' ? 'login' : 'register')">
             {{ type == 'register' ? '登录' : '注册新账号' }}
           </p>
-        </div>
+        </div>-->
       </div>
 
       <login v-if="type === 'login'" />

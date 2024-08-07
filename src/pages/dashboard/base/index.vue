@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <t-back-top
+  <div style="width: 100%">
+<!--    <t-back-top
       container=".tdesign-starter-layout"
       :visible-height="0"
       style="position: absolute"
@@ -8,14 +8,15 @@
     >
       <t-icon name="backtop" size="20px" />
     </t-back-top>
-    <!-- 顶部 card  -->
+    &lt;!&ndash; 顶部 card  &ndash;&gt;
     <top-panel class="row-container" />
-    <!-- 中部图表  -->
+    &lt;!&ndash; 中部图表  &ndash;&gt;
     <middle-chart class="row-container" />
-    <!-- 列表排名 -->
+    &lt;!&ndash; 列表排名 &ndash;&gt;
     <rank-list class="row-container" />
-    <!-- 出入库概览 -->
-    <output-overview class="row-container" />
+    &lt;!&ndash; 出入库概览 &ndash;&gt;
+    <output-overview class="row-container" />-->
+    <t-image style="width: 100%;" :src="imgUrl"/>
   </div>
 </template>
 <script>
@@ -32,6 +33,11 @@ export default {
     RankList,
     OutputOverview,
   },
+  data(){
+    return{
+      imgUrl: "http://192.168.0.142:9000/ydhy/home.jpg",
+    }
+  }
 };
 </script>
 <style scoped lang="less">

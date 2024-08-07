@@ -12,23 +12,13 @@
         <t-col :span="4">
           <t-row :gutter="[16, 24]">
             <t-col :flex="1">
-              <t-form-item label="名称" name="bannerName">
+              <t-form-item label="名称" name="ossName">
                 <t-input
-                  v-model="searchForm.bannerName"
+                  v-model="searchForm.ossName"
                   class="form-item-content"
                   type="search"
                   placeholder="请输入名称"
                   :style="{ minWidth: '134px' }"
-                />
-              </t-form-item>
-            </t-col>
-            <t-col :flex="1">
-              <t-form-item label="状态" name="bannerStatus">
-                <t-select
-                  v-model="searchForm.bannerStatus"
-                  class="form-item-content`"
-                  :options="statusOptions"
-                  placeholder="请选择状态"
                 />
               </t-form-item>
             </t-col>
@@ -59,51 +49,29 @@
         :headerAffixedTop="true"
         :headerAffixProps="{ offsetTop, container: getContainer }"
       >
-        <template #bannerUrl="slotProps">
-          <div>
-            <t-image :src="slotProps.row.bannerUrl" :style="{ width: '200px', height: '120px' }" ></t-image>
-          </div>
-        </template>
-        <template #bannerStatusSt="slotProps">
-          <div>
-            {{slotProps.row.bannerStatusStr}}
-          </div>
+        <template #ossUrl="slotProps">
+
+          <a class="t-button-link" target="_blank" :href="slotProps.row.ossUrl">{{slotProps.row.ossUrl}}</a>
         </template>
         <template #op="slotProps">
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
-            <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
-            <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
-            <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
+          <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
       <t-dialog
-        header="确认删除当前所选banner？"
-        :body="confirmBody"
+        header="确认删除当前所选数据？"
         :visible.sync="confirmVisible"
         @confirm="onConfirmDelete"
-        :onCancel="onCancel"
-      >
-      </t-dialog>
-      <t-dialog
-        :header="statusHeader"
-        :body="confirmBody"
-        :visible.sync="statusVisible"
-        @confirm="onConfirmStatus"
         :onCancel="onCancel"
       >
       </t-dialog>
       <!--  新增用户    -->
       <t-dialog placement="center" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
         <t-form :data="formData" :rules="rules" ref="formData" @submit="onSubmit">
-          <t-form-item label="名称" name="bannerName">
-            <t-input v-model="formData.bannerName" placeholder="请输入名称"></t-input>
+          <t-form-item label="名称" name="ossName">
+            <t-input v-model="formData.ossName" placeholder="请输入名称"></t-input>
           </t-form-item>
-          <t-form-item label="banner" name="bannerUrl">
-            <upload-file :value="formData.bannerUrl" @uploadChange="uploadChange"></upload-file>
-          </t-form-item>
-          <t-form-item label="宣传页" name="jumpUrl">
-            <upload-file :value="formData.jumpUrl" @uploadChange="uploadChange2"></upload-file>
+          <t-form-item label="链接" name="ossUrl">
+            <t-input v-model="formData.ossUrl" placeholder="请输入链接"></t-input>
           </t-form-item>
           <t-form-item style="margin-left: 100px">
             <t-space size="10px">
@@ -126,8 +94,8 @@ import {
   CONTRACT_TYPE_OPTIONS,
   CONTRACT_PAYMENT_TYPES,
 } from '@/constants';
-import {addOrUpdateBanner, delBanner, getBannerList, updateBannerStatus} from "@/api/banner";
 import UploadFile from "@/components/uploadFile/index.vue";
+import {delOss, getOssList, saveOss} from "@/api/operation";
 
 export default {
   name: 'banner',
@@ -144,17 +112,17 @@ export default {
       CONTRACT_PAYMENT_TYPES,
       prefix,
       searchForm: {
-        bannerName: '',
+        ossName: '',
         bannerStatus: undefined,
       },
       formData: {
-        bannerName: '', // 名
-        bannerUrl: [], // banner
+        ossName: '', // 名
+        ossUrl: '', // banner
         jumpUrl:[], // 宣传页
-        bannerCode:null
+        ossCode:null
       },
       rules: {
-        bannerName: [
+        ossName: [
           {
             required: true,
             message: '请输入名称',
@@ -162,23 +130,10 @@ export default {
             trigger: 'blur',
           },
         ],
-        bannerUrl: [
+        ossUrl: [
           { required: true, message: '请上传图片', type: 'error',trigger: 'change'},
         ],
-        jumpUrl: [
-          { required: true, message: '请上传图片', type: 'error',trigger: 'change' },
-        ],
       },
-      statusOptions:[
-        {
-          label: '上架',
-          value: '1',
-        },
-        {
-          label: '下架',
-          value: '2',
-        }
-      ],
       tableList: [],
       visibleCenter: false,
       dataLoading: false,
@@ -197,15 +152,14 @@ export default {
           title: '名称',
           width: 200,
           ellipsis: true,
-          colKey: 'bannerName',
+          colKey: 'ossName',
         },
         {
-          title: '图片',
+          title: '链接',
           width: 200,
           ellipsis: true,
-          colKey: 'bannerUrl',
+          colKey: 'ossUrl',
         },
-        {title: '状态', colKey: 'bannerStatusSt', width: 200, cell: {col: 'status'}},
         {
           align: 'left',
           fixed: 'right',
@@ -252,11 +206,10 @@ export default {
     getList(){
       this.dataLoading = true;
       const that = this
-      getBannerList({
+      getOssList({
         pages: that.paginationInfo.defaultCurrent,
         pageSize: that.paginationInfo.defaultPageSize,
-        bannerName: that.searchForm.bannerName,
-        bannerStatus: that.searchForm.bannerStatus,
+        ossName: that.searchForm.ossName,
       }).then(res => {
         const list = res.resultBody;
         that.tableList = list;
@@ -272,7 +225,7 @@ export default {
       this.getList()
     },
     openDialog(){
-      this.dialogTitle = "新增用户"
+      this.dialogTitle = "新增"
       this.$refs.formData.reset();
       this.visibleCenter = true
     },
@@ -283,11 +236,9 @@ export default {
     onSubmit({ validateResult, firstError }) {
       const that = this
       if (validateResult === true) {
-        addOrUpdateBanner({
-          bannerName:this.formData.bannerName,
-          bannerUrl:this.formData.bannerUrl[0].url,
-          jumpUrl:this.formData.jumpUrl[0].url,
-          bannerCode:this.formData.bannerCode?this.formData.bannerCode:''
+        saveOss({
+          ossName:this.formData.ossName,
+          ossUrl:this.formData.ossUrl,
         }).then(res => {
           if(res.status){
             that.$refs.formData.reset();
@@ -305,45 +256,29 @@ export default {
         this.$message.warning(firstError);
       }
     },
-    // 图片变化
-    uploadChange(file){
-      console.log('banner',file)
-      this.formData.bannerUrl = file
-    },
-    // 图片变化
-    uploadChange2(file){
-      console.log('banner',file)
-      this.formData.jumpUrl = file
-    },
     getContainer() {
       return document.querySelector('.tdesign-starter-layout');
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.paginationInfo.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
-    // 编辑
-    rehandleClickOp({text, row}) {
-      this.formData.bannerName = row.bannerName;
-      this.formData.bannerCode = row.bannerCode;
-      this.formData.jumpUrl = [{name:'jump',url:row.jumpUrl}];
-      this.formData.bannerUrl =  [{name:'banner',url:row.bannerUrl}];
-      this.visibleCenter = true
-    },
     // 删除弹窗
     handleClickDelete(row) {
       console.log(row)
-      this.deleteIdx = row.row.bannerCode;
+      this.deleteIdx = row.row.ossCode;
       this.confirmVisible = true;
     },
     // 删除确认
     onConfirmDelete() {
       // 真实业务请发起请求
       const that = this
-      delBanner({
-        bannerCode: that.deleteIdx,
+      delOss({
+        ossCode: that.deleteIdx,
       }).then(res => {
         if(res.status){
           this.confirmVisible = false;
@@ -356,40 +291,6 @@ export default {
 
       });
       this.resetIdx();
-    },
-    // 上下架弹窗
-    handleClickStatus(row,status) {
-      console.log(row)
-      this.statusHeader = '确定' + (status == 1? '上架':'下架') +'所选banner吗'
-      this.deleteIdx = row.row.bannerCode;
-      this.status = status
-      this.statusVisible = true;
-    },
-    // 上下架确认
-    onConfirmStatus() {
-      // 真实业务请发起请求
-      const that = this
-      updateBannerStatus({
-        bannerCode: that.deleteIdx,
-        bannerStatus: that.status,
-      }).then(res => {
-        if(res.status){
-          this.statusVisible = false;
-          this.$message.success('操作成功');
-          this.getList()
-        }
-      }).catch((e) => {
-        console.log(e);
-      }).finally(() => {
-
-      });
-      this.resetIdx();
-    },
-    onCancel() {
-      this.resetIdx();
-    },
-    resetIdx() {
-      this.deleteIdx = -1;
     },
   },
 };

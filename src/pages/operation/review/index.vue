@@ -12,9 +12,9 @@
         <t-col :span="4">
           <t-row :gutter="[16, 24]">
             <t-col :flex="1">
-              <t-form-item label="资讯名称" name="newsTitle">
+              <t-form-item label="资讯名称" name="reviewName">
                 <t-input
-                  v-model="searchForm.newsTitle"
+                  v-model="searchForm.reviewName"
                   class="form-item-content"
                   type="search"
                   placeholder="请输入资讯名称"
@@ -23,9 +23,9 @@
               </t-form-item>
             </t-col>
             <t-col :flex="1">
-              <t-form-item label="状态" name="newsStatus">
+              <t-form-item label="状态" name="reviewStatus">
                 <t-select
-                  v-model="searchForm.newsStatus"
+                  v-model="searchForm.reviewStatus"
                   class="form-item-content`"
                   :options="statusOptions"
                   placeholder="请选择状态"
@@ -50,7 +50,6 @@
         :data="tableList"
         :columns="columns"
         :rowKey="rowKey"
-        :verticalAlign="verticalAlign"
         :hover="hover"
         height="calc(100vh - 320px)"
         :pagination="paginationInfo"
@@ -60,37 +59,112 @@
         :headerAffixedTop="true"
         :headerAffixProps="{ offsetTop, container: getContainer }"
       >
+
+        <template #reviewCoverUrl="slotProps">
+          <div>
+            <t-image :src="slotProps.row.reviewCoverUrl" :style="{ width: '200px', height: '120px' }" ></t-image>
+          </div>
+        </template>
         <template #op="slotProps">
-          <a class="t-button-link" v-if="slotProps.row.newsStatus == 1" @click="rehandleClickOp(slotProps)">下架</a>
-          <a class="t-button-link" v-else @click="rehandleClickOp(slotProps)">上架</a>
-          <a class="t-button-link" @click="rehandleClickOp(slotProps)">编辑</a>
-          <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
-          <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
+          <a class="t-button-link" v-if="slotProps.row.reviewStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
+          <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
+          <a class="t-button-link"  v-if="slotProps.row.reviewStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
+          <a class="t-button-link" @click="rehandleClickLook(slotProps)">查看</a>
+          <a class="t-button-link"  v-if="slotProps.row.reviewStatus == 2" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
       <t-dialog
-        header="确认删除当前所选资讯？"
+        header="确认删除当前所选信息？"
         :body="confirmBody"
         :visible.sync="confirmVisible"
         @confirm="onConfirmDelete"
         :onCancel="onCancel"
       >
       </t-dialog>
+
+      <t-dialog
+        :header="statusHeader"
+        :visible.sync="statusVisible"
+        @confirm="onConfirmStatus"
+        :onCancel="onCancel"
+      >
+      </t-dialog>
       <!--  新增用户    -->
-      <t-dialog placement="center" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
+      <t-dialog placement="center" width="50%" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
         <t-form :data="formData" :rules="rules" ref="formData" @submit="onSubmit">
-          <t-form-item label="名称" name="bannerName">
-            <t-input v-model="formData.bannerName" placeholder="请输入名称"></t-input>
+          <t-form-item label="名称" name="reviewName">
+            <t-input v-model="formData.reviewName" placeholder="请输入名称"></t-input>
           </t-form-item>
-          <t-form-item label="banner" name="bannerUrl">
-            <upload-file :value="formData.bannerUrl"></upload-file>
+          <t-form-item label="封面图" name="reviewCoverUrl">
+            <upload-file  @uploadChange="uploadChange" :value="formData.reviewCoverUrl"></upload-file>
           </t-form-item>
-          <t-form-item label="宣传页" name="junpUrl">
-            <upload-file :value="formData.junpUrl"></upload-file>
+          <t-form-item label="标题" name="reviewTitle">
+            <t-input v-model="formData.reviewTitle" placeholder="请输入名称"></t-input>
+          </t-form-item>
+          <t-form-item label="地址" name="reviewAddr">
+            <t-input v-model="formData.reviewAddr" placeholder="请输入名称"></t-input>
+          </t-form-item>
+          <t-form-item label="时间" name="reviewTime">
+            <t-date-picker v-model="formData.reviewTime" allow-input clearable  format="YYYY-MM-DD" />
+          </t-form-item>
+          <t-form-item label="参会人数" name="reviewUserNum">
+            <t-input v-model="formData.reviewUserNum" placeholder="请输入名称"></t-input>
+          </t-form-item>
+          <t-form-item label="宣传图" name="reviewBillboardUrl">
+            <upload-file @uploadChange="uploadChange2" :value="formData.reviewBillboardUrl"></upload-file>
+          </t-form-item>
+          <t-form-item label="宣传视频" name="reviewBillboardVideo">
+            <upload-file accept="video/*" themeType="file" :limit="limitS"  @uploadChange="uploadChangeVideo" :value="formData.reviewBillboardVideo"></upload-file>
+          </t-form-item>
+          <t-form-item label="大会总结" name="reviewSummary">
+            <t-textarea
+              v-model="formData.reviewSummary"
+              placeholder="请输入简介"
+              name="description"
+              :autosize="{ minRows: 3, maxRows: 5 }"
+            />
           </t-form-item>
           <t-form-item style="margin-left: 100px">
             <t-space size="10px">
               <t-button theme="primary" type="submit">提交</t-button>
+            </t-space>
+          </t-form-item>
+        </t-form>
+      </t-dialog>
+      <!--  查看用户    -->
+      <t-dialog placement="center" width="50%" header="查看" :visible="visibleLook" :onClose="close" :footer="false">
+        <t-form :data="formData" @submit="close">
+          <t-form-item label="名称" name="reviewName">
+            {{formData.reviewName}}
+          </t-form-item>
+          <t-form-item label="封面图片" name="reviewCoverUrl">
+            <upload-file :disabled="true" :value="formData.reviewCoverUrl"></upload-file>
+          </t-form-item>
+          <t-form-item label="标题" name="reviewTitle">
+            {{formData.reviewTitle}}
+          </t-form-item>
+          <t-form-item label="地址" name="reviewAddr">
+            {{formData.reviewAddr}}
+          </t-form-item>
+          <t-form-item label="时间" name="reviewTime">
+            {{formData.reviewTime}}
+          </t-form-item>
+          <t-form-item label="参会人数" name="reviewUserNum">
+            {{formData.reviewUserNum}}人
+          </t-form-item>
+          <t-form-item label="宣传图" name="reviewBillboardUrl">
+            <upload-file :disabled="true" :value="formData.reviewBillboardUrl"></upload-file>
+          </t-form-item>
+          <t-form-item label="宣传视频" name="reviewBillboardVideo">
+            <video :src="formData.reviewBillboardVideo" controls autoplay style="height: 200px"> </video>
+
+          </t-form-item>
+          <t-form-item label="大会总结" name="reviewSummary">
+            {{formData.reviewSummary}}
+          </t-form-item>
+          <t-form-item style="margin-left: 100px">
+            <t-space size="10px">
+              <t-button theme="primary" type="submit">关闭</t-button>
             </t-space>
           </t-form-item>
         </t-form>
@@ -109,8 +183,12 @@ import {
   CONTRACT_TYPE_OPTIONS,
   CONTRACT_PAYMENT_TYPES,
 } from '@/constants';
-import {getNewsList} from "@/api/operation";
-import {addOrUpdateBanner} from "@/api/banner";
+import {
+  delReview, getReviewInfo,
+  getReviewList,
+  saveReview,
+  updateReviewStatus
+} from "@/api/operation";
 import UploadFile from "@/components/uploadFile/index.vue";
 
 export default {
@@ -127,14 +205,18 @@ export default {
       CONTRACT_TYPE_OPTIONS,
       CONTRACT_PAYMENT_TYPES,
       prefix,
+      limitS:{
+        size: 800,
+        unit: 'MB'
+      },
       searchForm: {
-        newsTitle: '',
-        newsStatus: undefined,
+        reviewName: '',
+        reviewStatus: undefined,
       },
       statusOptions:[
         {
           label: '下架',
-          value: '0',
+          value: '2',
         },
         {
           label: '上架',
@@ -158,21 +240,15 @@ export default {
           title: '名称',
           width: 200,
           ellipsis: true,
-          colKey: 'newsTitle',
+          colKey: 'reviewName',
         },
         {
-          title: '简介',
+          title: '封面图',
           width: 200,
           ellipsis: true,
-          colKey: 'newsIntroduce',
+          colKey: 'reviewCoverUrl',
         },
-        {
-          title: '创建时间',
-          width: 200,
-          ellipsis: true,
-          colKey: 'newsTime',
-        },
-        {title: '状态', colKey: 'newsStatusStr', width: 200, cell: {col: 'status'}},
+        {title: '状态', colKey: 'reviewStatusStr', width: 200, cell: {col: 'status'}},
         {
           align: 'left',
           fixed: 'right',
@@ -183,7 +259,6 @@ export default {
       ],
       rowKey: 'index',
       tableLayout: 'auto',
-      verticalAlign: 'top',
       bordered: true,
       hover: true,
       rowClassName: (rowKey) => `${rowKey}-class`,
@@ -196,12 +271,37 @@ export default {
       confirmVisible: false,
       deleteIdx: -1,
       visibleCenter: false,
+      visibleLook: false,
       dialogTitle: '',
       formData: {
-        bannerName: '', // 名
-        bannerUrl: undefined, // 角色
-        junpUrl:"" // 密码
+        reviewAddr: '', // 回顾地址
+        reviewBillboardUrl: [], // 宣传图
+        reviewBillboardVideo: [], // 宣传视频
+        reviewName: "", // 回顾名称
+        reviewSummary: "", // 大会总结
+        reviewTime: "", // 回顾时间
+        reviewTitle: "", // 回顾标题
+        reviewUserNum: "", // 参会人员
+        reviewCoverUrl:[] // 回顾封面图
       },
+      rules: {
+        newsTitle: [
+          {
+            required: true,
+            message: '请输入名称',
+            type: 'error',
+            trigger: 'blur',
+          },
+        ],
+        // newsUrls: [
+        //   { required: true, message: '请上传图片', type: 'error',trigger: 'change'},
+        // ],
+        newsIntroduce: [
+          { required: true, message: '请上传图片', type: 'error',trigger: 'change' },
+        ],
+      },
+      statusHeader:'',
+      statusVisible:false
     };
   },
   computed: {
@@ -224,11 +324,11 @@ export default {
     getList(){
       this.dataLoading = true;
       const that = this
-      getNewsList({
+      getReviewList({
         pages: that.paginationInfo.defaultCurrent,
         pageSize: that.paginationInfo.defaultPageSize,
-        newsTitle: that.searchForm.newsTitle,
-        newsStatus: that.searchForm.newsStatus,
+        reviewName: that.searchForm.reviewName,
+        reviewStatus: that.searchForm.reviewStatus,
       }).then(res => {
         const list = res.resultBody;
         this.tableList = list;
@@ -254,16 +354,35 @@ export default {
     close(){
       this.$refs.formData.reset();
       this.visibleCenter = false
+      this.visibleLook = false
+    },
+    // 名称
+    uploadChange(file){
+      this.formData.reviewCoverUrl = file
+    },
+    // 封面图
+    uploadChange2(file){
+      this.formData.reviewBillboardUrl = file
+    },
+    // 宣传视频
+    uploadChangeVideo(file){
+      this.formData.reviewBillboardVideo = file
     },
     onSubmit({ validateResult, firstError }) {
       const that = this
       if (validateResult === true) {
-        addOrUpdateBanner(this.formData).then(res => {
+        const form = JSON.parse(JSON.stringify(this.formData)) ;
+        console.log(this.formData.reviewBillboardVideo)
+        form.reviewCode = form.reviewCode?form.reviewCode:null // 密码
+        form.reviewBillboardUrl = this.formData.reviewBillboardUrl?this.formData.reviewBillboardUrl[0].url:''
+        form.reviewCoverUrl = this.formData.reviewCoverUrl[0]?this.formData.reviewCoverUrl[0].url:''
+        form.reviewBillboardVideo = this.formData.reviewBillboardVideo[0]?this.formData.reviewBillboardVideo[0].url:''
+        saveReview(form).then(res => {
           if(res.status){
             that.$refs.formData.reset();
             that.visibleCenter = false
             that.getList()
-            this.$message.success('提交成功');
+            this.$message.success(res.msg);
           }
         }).catch((e) => {
           console.log(e);
@@ -277,23 +396,86 @@ export default {
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.paginationInfo.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
     rehandleClickOp({text, row}) {
       console.log(text, row);
+      this.getReviewInfo(row.reviewCode,1)
+      this.visibleCenter = true
+    },
+    rehandleClickLook({text, row}) {
+      console.log(text, row);
+      this.getReviewInfo(row.reviewCode)
+
+      this.visibleLook = true
+    },
+    getReviewInfo(code,type){
+      getReviewInfo({
+        reviewCode: code,
+      }).then(res => {
+        if(res.status){
+          this.formData = res.data
+          this.formData.reviewCoverUrl = [{url: res.data.reviewCoverUrl}]
+          this.formData.reviewBillboardUrl = [{url: res.data.reviewBillboardUrl}]
+          if(type == 1){
+            this.formData.reviewBillboardVideo = [{name:'video',url: res.data.reviewBillboardVideo}]
+          }
+        }
+      }).catch((e) => {
+        console.log(e);
+      })
+    },
+    // 上下架弹窗
+    handleClickStatus(row,status) {
+      console.log(row)
+      this.statusHeader = '确定' + (status == 1? '上架':'下架') +'所选信息吗'
+      this.deleteIdx = row.row.reviewCode;
+      this.status = status
+      this.statusVisible = true;
+    },
+    // 上下架确认
+    onConfirmStatus() {
+      // 真实业务请发起请求
+      const that = this
+      updateReviewStatus({
+        reviewCode: that.deleteIdx,
+        reviewStatus: that.status,
+      }).then(res => {
+        if(res.status){
+          this.statusVisible = false;
+          this.$message.success('操作成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
+      this.resetIdx();
     },
     handleClickDelete(row) {
-      this.deleteIdx = row.rowIndex;
+      this.deleteIdx = row.row.reviewCode;
       this.confirmVisible = true;
     },
     onConfirmDelete() {
-      // 真实业务请发起请求
-      this.data.splice(this.deleteIdx, 1);
-      this.pagination.total = this.data.length;
-      this.confirmVisible = false;
-      this.$message.success('删除成功');
+      // 真实业务请发起请求delNews
+      delReview({
+        reviewCode: this.deleteIdx,
+      }).then(res => {
+        if(res.status){
+          this.confirmVisible = false;
+          this.$message.success('删除成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
       this.resetIdx();
     },
     onCancel() {
@@ -314,7 +496,7 @@ export default {
   padding: 30px 32px;
   border-radius: var(--td-radius-default);
 
-  .t-table__content{
+  .t-table__content {
     height: calc(100% - 300px);
   }
 }

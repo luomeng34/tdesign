@@ -1,7 +1,9 @@
 <template>
   <header class="login-header">
-    <logo-full-icon class="logo" />
-    <div class="operations-container">
+<!--    <logo-full-icon class="logo" />-->
+    <div class="logo"></div>
+<!--    <image class="logo" src="@/assets/logo.png"></image>-->
+<!--    <div class="operations-container">
       <t-button theme="default" shape="square" variant="text" @click="navToGitHub">
         <logo-github-icon class="icon" />
       </t-button>
@@ -11,7 +13,7 @@
       <t-button theme="default" shape="square" variant="text" @click="toggleSettingPanel">
         <setting-icon class="icon" />
       </t-button>
-    </div>
+    </div>-->
   </header>
 </template>
 
@@ -47,8 +49,15 @@ export default {
   color: var(--td-text-color-primary);
 
   .logo {
-    width: 188px;
-    height: var(--td-comp-size-xxxl);
+    //width: 188px;
+    width: 362px;
+    height: 48px;
+    background-image: url('@/assets/logo.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    margin-top: 80px;
+    margin-left: 20px;
+    //background-position: 100%;
   }
 
   .operations-container {

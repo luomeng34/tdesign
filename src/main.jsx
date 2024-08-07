@@ -13,12 +13,14 @@ import 'tdesign-vue/es/style/index.css';
 import '@/style/index.less';
 
 import './permission';
+import Editor from "@/components/Editor/index.vue";
+
 import store from './store';
 
 Vue.use(VueRouter);
 Vue.use(TDesign);
 Vue.use(VueClipboard);
-
+Vue.component('Editor', Editor)
 Vue.component('t-page-header');
 
 Vue.prototype.$request = axiosInstance;
@@ -41,7 +43,7 @@ new Vue({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   render: (h) => (
     <div>
-      {/* 可以通过config-provider提供全局（多语言、全局属性）配置，如 
+      {/* 可以通过config-provider提供全局（多语言、全局属性）配置，如
       <t-config-provider globalConfig={enConfig}> */}
       <t-config-provider globalConfig={zhConfig}>
         <App />

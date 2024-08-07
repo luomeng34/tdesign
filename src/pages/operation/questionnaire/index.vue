@@ -1,34 +1,38 @@
 <template>
   <div class="list-common-table">
+    <t-form :data="survey" :rules="rules" ref="survey" @submit="onSurveySubmit">
+      <t-form-item label="问卷标题" name="questionnaireTitle">
+        <t-input v-model="survey.questionnaireTitle" :disabled="disableSur" placeholder="请输入名称"></t-input>
+      </t-form-item>
+      <t-form-item label="问卷介绍" name="questionnaireContext">
+        <t-input v-model="survey.questionnaireContext" :disabled="disableSur" placeholder="请输入名称"></t-input>
+      </t-form-item>
+      <t-form-item style="margin-left: 100px">
+        <t-space size="10px">
+          <t-button v-if="!disableSur" theme="primary" type="submit">提交</t-button>
+        </t-space>
+      </t-form-item>
+    </t-form>
+    <t-button style="margin-left: 100px" v-if="disableSur" theme="primary" @click="edit">编辑</t-button>
     <t-form
       ref="form"
       :data="searchForm"
       :label-width="80"
       colon
       @reset="onReset"
-      :style="{ marginBottom: '24px' }"
+      :style="{ marginBottom: '24px',marginTop: '24px' }"
     >
       <t-row>
         <t-col :span="4">
           <t-row :gutter="[16, 24]">
             <t-col :flex="1">
-              <t-form-item label="标题" name="bannerName">
+              <t-form-item label="标题" name="itemQuestion">
                 <t-input
-                  v-model="searchForm.bannerName"
+                  v-model="searchForm.itemQuestion"
                   class="form-item-content"
                   type="search"
                   placeholder="请输入标题"
                   :style="{ minWidth: '134px' }"
-                />
-              </t-form-item>
-            </t-col>
-            <t-col :flex="1">
-              <t-form-item label="状态" name="bannerStatus">
-                <t-select
-                  v-model="searchForm.bannerStatus"
-                  class="form-item-content`"
-                  :options="statusOptions"
-                  placeholder="请选择状态"
                 />
               </t-form-item>
             </t-col>
@@ -40,6 +44,13 @@
         </t-col>
       </t-row>
     </t-form>
+
+    <t-row>
+      <t-col :span="4">
+        <t-button theme="primary" @click="openDialog"> 新增</t-button>
+      </t-col>
+    </t-row>
+
     <div class="table-container">
       <t-table
         :data="tableList"
@@ -54,29 +65,43 @@
         :headerAffixedTop="true"
         :headerAffixProps="{ offsetTop, container: getContainer }"
       >
-        <template #bannerUrl="slotProps">
+        <template #itemStatusStr="slotProps">
           <div>
-            <t-image :src="slotProps.row.bannerUrl" :style="{ width: '200px', height: '120px' }" ></t-image>
-          </div>
-        </template>
-        <template #bannerStatusSt="slotProps">
-          <div>
-            {{slotProps.row.bannerStatusStr}}
+            {{slotProps.row.itemStatusStr}}
           </div>
         </template>
         <template #op="slotProps">
-            <a class="t-button-link" @click="handleClickDelete(slotProps)">编辑</a>
+          <a class="t-button-link" v-if="slotProps.row.itemStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
+          <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
+          <a class="t-button-link" v-if="slotProps.row.itemStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
+          <a class="t-button-link" @click="rehandleClickLook(slotProps)">查看</a>
+          <a class="t-button-link" v-if="slotProps.row.itemStatus == 2" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
+      <t-dialog
+        header="确认删除当前所选问题？"
+        :visible.sync="confirmVisible"
+        @confirm="onConfirmDelete"
+        :onCancel="onCancel"
+      >
+      </t-dialog>
+      <!--  上下架    -->
+      <t-dialog
+        :header="statusHeader"
+        :visible.sync="statusVisible"
+        @confirm="onConfirmStatus"
+        :onCancel="onCancel"
+      >
+      </t-dialog>
       <!--  新增用户    -->
       <t-dialog placement="center" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
         <t-form :data="formData" :rules="rules" ref="formData" @submit="onSubmit">
-          <t-form-item label="标题" name="intentionTitle">
-            <t-input v-model="formData.intentionTitle" placeholder="请输入名称"></t-input>
+          <t-form-item label="序号" name="itemNum">
+            <t-input-number decimalPlaces="0" v-model="formData.itemNum" placeholder="请输入名称"></t-input-number>
           </t-form-item>
-<!--          <t-form-item label="副标题" name="intentionSubtitle">
-            <t-input v-model="formData.intentionSubtitle" placeholder="请输入名称"></t-input>
-          </t-form-item>-->
+          <t-form-item label="问题" name="itemQuestion">
+            <t-input v-model="formData.itemQuestion" placeholder="请输入问题"></t-input>
+          </t-form-item>
           <t-form-item style="margin-left: 100px">
             <t-space size="10px">
               <t-button theme="primary" type="submit">提交</t-button>
@@ -98,9 +123,12 @@ import {
   CONTRACT_TYPE_OPTIONS,
   CONTRACT_PAYMENT_TYPES,
 } from '@/constants';
-import { delBanner, getBannerList} from "@/api/banner";
 import UploadFile from "@/components/uploadFile/index.vue";
-import {saveIntentionTitle} from "@/api/operation";
+import {
+  delQuestionnaireItem, getQuestionnaireItemList,
+  saveQuestionnaire, saveQuestionnaireItem,
+  selectQuestionnaire, updateQuestionnaireItemStatus, updateQuestionnaireStatus
+} from "@/api/operation";
 
 export default {
   name: 'banner',
@@ -121,26 +149,20 @@ export default {
         bannerStatus: undefined,
       },
       formData: {
-        intentionSubtitle: '', // 名
-        intentionTitle:"" // 密码
+        itemNum: '', // 名
+        itemQuestion:"" // 密码
       },
       rules: {
-        intentionSubtitle: [
+        itemNum: [
           {
             required: true,
-            message: '请输入副标题',
+            message: '请输入序号',
             type: 'error',
             trigger: 'blur',
           },
-          {
-            max: 20,
-            message: '20个字以内',
-            type: 'warning',
-            trigger: 'blur',
-          },
         ],
-        intentionTitle: [
-          { required: true, message: '请输入标题', type: 'error' },
+        itemQuestion: [
+          { required: true, message: '请输入问题', type: 'error' },
         ],
       },
       statusOptions:[
@@ -150,7 +172,7 @@ export default {
         },
         {
           label: '下架',
-          value: '0',
+          value: '2',
         }
       ],
       tableList: [],
@@ -165,22 +187,16 @@ export default {
           width: 200,
           align: 'left',
           ellipsis: true,
-          colKey: 'serial-number',
+          colKey: 'itemNum',
         },
 
         {
-          title: '名称',
+          title: '问题',
           width: 200,
           ellipsis: true,
-          colKey: 'bannerName',
+          colKey: 'itemQuestion',
         },
-        {
-          title: '图片',
-          width: 200,
-          ellipsis: true,
-          colKey: 'bannerUrl',
-        },
-        {title: '状态', colKey: 'bannerStatusSt', width: 200, cell: {col: 'status'}},
+        {title: '状态', colKey: 'itemStatusStr', width: 200, cell: {col: 'status'}},
         {
           align: 'left',
           fixed: 'right',
@@ -202,6 +218,13 @@ export default {
       },
       confirmVisible: false,
       deleteIdx: -1,
+      survey:{
+        questionnaireTitle:"",
+        questionnaireContext:''
+      },
+      disableSur:true,
+      statusHeader:"",
+      statusVisible: false,
     };
   },
   computed: {
@@ -217,18 +240,23 @@ export default {
     },
   },
   mounted() {
-    this.getList()
-
+    this.init()
   },
   methods: {
-    getList(){
+    init(){
+      selectQuestionnaire({}).then(res=>{
+        this.survey = res.data
+        this.getList(res.data.questionnaireCode)
+      })
+    },
+    getList(code){
       this.dataLoading = true;
       const that = this
-      getBannerList({
+      getQuestionnaireItemList({
         pages: that.paginationInfo.defaultCurrent,
         pageSize: that.paginationInfo.defaultPageSize,
-        bannerName: that.searchForm.bannerName,
-        bannerStatus: that.searchForm.bannerStatus,
+        questionnaireCode: this.survey.questionnaireCode,
+        itemQuestion: this.searchForm.itemQuestion,
       }).then(res => {
         const list = res.resultBody;
         that.tableList = list;
@@ -247,15 +275,25 @@ export default {
       this.$refs.formData.reset();
       this.visibleCenter = false
     },
+    openDialog() {
+      this.dialogTitle = "新增"
+      this.$refs.formData.reset();
+      this.visibleCenter = true
+    },
     onSubmit({ validateResult, firstError }) {
       const that = this
       if (validateResult === true) {
-        saveIntentionTitle(this.formData).then(res => {
+        saveQuestionnaireItem({
+          questionnaireCode:this.survey.questionnaireCode,
+          itemQuestion:this.formData.itemQuestion,
+          itemNum: this.formData.itemNum,
+          itemCode:this.formData.itemCode?this.formData.itemCode:null,
+        }).then(res => {
           if(res.status){
             that.$refs.formData.reset();
             that.visibleCenter = false
             that.getList()
-            this.$message.success('提交成功');
+            this.$message.success('保存成功');
           }
         }).catch((e) => {
           console.log(e);
@@ -267,6 +305,30 @@ export default {
         this.$message.warning(firstError);
       }
     },
+    edit(){
+      this.disableSur = false
+    },
+    onSurveySubmit({ validateResult, firstError }) {
+      const that = this
+      if (validateResult === true) {
+        saveQuestionnaire(this.survey).then(res => {
+          if(res.status){
+            that.$refs.survey.reset();
+            this.init()
+            this.disableSur = true
+            this.$message.success('保存成功');
+          }
+        }).catch((e) => {
+          console.log(e);
+        }).finally(() => {
+          this.dataLoading = false;
+        });
+      } else {
+        console.log('Errors: ', validateResult);
+        this.$message.warning(firstError);
+      }
+    },
+
     getContainer() {
       return document.querySelector('.tdesign-starter-layout');
     },
@@ -276,11 +338,65 @@ export default {
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
+    rehandleClickOp({text, row}) {
+      this.formData.itemCode = row.itemCode;
+      this.formData.itemNum = row.itemNum;
+      this.formData.itemQuestion = row.itemQuestion;
+      this.dialogTitle = "编辑"
+      this.visibleCenter = true;
+    },
+    // 删除弹窗
     handleClickDelete(row) {
       console.log(row)
-      this.deleteIdx = row.row.bannerCode;
-      this.dialogTitle = "编辑意向合作"
-      this.visibleCenter = true;
+      this.deleteIdx = row.row.itemCode;
+      this.confirmVisible = true;
+    },
+    // 删除确认
+    onConfirmDelete() {
+      // 真实业务请发起请求
+      const that = this
+      delQuestionnaireItem({
+        itemCode: that.deleteIdx,
+      }).then(res => {
+        if(res.status){
+          this.confirmVisible = false;
+          this.$message.success('删除成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
+      this.resetIdx();
+    },
+    // 上下架弹窗
+    handleClickStatus(row,status) {
+      console.log(row)
+      this.statusHeader = '确定' + (status == 1? '上架':'下架') +'所选信息吗'
+      this.deleteIdx = row.row.itemCode;
+      this.status = status
+      this.statusVisible = true;
+    },
+    // 上下架确认
+    onConfirmStatus() {
+      // 真实业务请发起请求
+      const that = this
+      updateQuestionnaireItemStatus({
+        itemCode: that.deleteIdx,
+        itemStatus: that.status,
+      }).then(res => {
+        if(res.status){
+          this.statusVisible = false;
+          this.$message.success('操作成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
+      this.resetIdx();
     },
     onCancel() {
       this.resetIdx();

@@ -22,16 +22,6 @@
                 />
               </t-form-item>
             </t-col>
-            <t-col :flex="1">
-              <t-form-item label="状态" name="bannerStatus">
-                <t-select
-                  v-model="searchForm.bannerStatus"
-                  class="form-item-content`"
-                  :options="statusOptions"
-                  placeholder="请选择状态"
-                />
-              </t-form-item>
-            </t-col>
           </t-row>
         </t-col>
         <t-col :span="8" class="operation-container">
@@ -40,11 +30,14 @@
         </t-col>
       </t-row>
     </t-form>
-    <t-row>
-      <t-col :span="4">
-        <t-button theme="primary" @click="openDialog"> 新增 </t-button>
-      </t-col>
-    </t-row>
+    <t-tab-panel :value="1" label="意向合作">
+      <p style="margin: 20px">
+        <button ></button>
+      </p>
+    </t-tab-panel>
+    <t-tab-panel :value="2" label="调研问卷">
+      <p style="margin: 20px">选项卡2内容区</p>
+    </t-tab-panel>
     <div class="table-container">
       <t-table
         :data="tableList"
@@ -70,10 +63,7 @@
           </div>
         </template>
         <template #op="slotProps">
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
-            <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
-            <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
+            <a class="t-button-link" @click="rehandleClickOp(slotProps)">导出</a>
             <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
@@ -128,7 +118,8 @@ import {
 } from '@/constants';
 import {addOrUpdateBanner, delBanner, getBannerList, updateBannerStatus} from "@/api/banner";
 import UploadFile from "@/components/uploadFile/index.vue";
-
+import {exportIntentionExcel} from "@/api/operation";
+import * as XLSX from 'xlsx';
 export default {
   name: 'banner',
   components: {
@@ -320,17 +311,38 @@ export default {
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.paginationInfo.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
     // 编辑
     rehandleClickOp({text, row}) {
-      this.formData.bannerName = row.bannerName;
-      this.formData.bannerCode = row.bannerCode;
-      this.formData.jumpUrl = [{name:'jump',url:row.jumpUrl}];
-      this.formData.bannerUrl =  [{name:'banner',url:row.bannerUrl}];
-      this.visibleCenter = true
+      // this.formData.bannerName = row.bannerName;
+      // this.formData.bannerCode = row.bannerCode;
+      // this.formData.jumpUrl = [{name:'jump',url:row.jumpUrl}];
+      // this.formData.bannerUrl =  [{name:'banner',url:row.bannerUrl}];
+      // this.visibleCenter = true
+      exportIntentionExcel({
+        intentionCode:'IE1813764601364484096'
+      }).then(res => {
+        const fileName = "exported_data.xlsx";
+        const url = window.URL.createObjectURL(new Blob([res],{type:"application/vnd.ms-excel;charset=UTF-8"}));
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
     },
     // 删除弹窗
     handleClickDelete(row) {

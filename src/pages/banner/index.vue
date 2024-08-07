@@ -70,24 +70,23 @@
           </div>
         </template>
         <template #op="slotProps">
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
-            <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
-            <a class="t-button-link" v-if="slotProps.row.bannerStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
-            <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
-            <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
+          <a class="t-button-link" v-if="slotProps.row.bannerStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
+          <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
+          <a class="t-button-link" v-if="slotProps.row.bannerStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
+          <a class="t-button-link" @click="rehandleClickLook(slotProps)">查看</a>
+          <a class="t-button-link" v-if="slotProps.row.bannerStatus == 2" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
       <t-dialog
         header="确认删除当前所选banner？"
-        :body="confirmBody"
         :visible.sync="confirmVisible"
         @confirm="onConfirmDelete"
         :onCancel="onCancel"
       >
       </t-dialog>
+      <!--  上下架    -->
       <t-dialog
         :header="statusHeader"
-        :body="confirmBody"
         :visible.sync="statusVisible"
         @confirm="onConfirmStatus"
         :onCancel="onCancel"
@@ -108,6 +107,25 @@
           <t-form-item style="margin-left: 100px">
             <t-space size="10px">
               <t-button theme="primary" type="submit">提交</t-button>
+            </t-space>
+          </t-form-item>
+        </t-form>
+      </t-dialog>
+      <!--  查看    -->
+      <t-dialog placement="center" header="查看" :visible="visibleLook" :onClose="close" :footer="false">
+        <t-form :data="formData" @submit="close">
+          <t-form-item label="名称" name="bannerName">
+            {{formData.bannerName}}
+          </t-form-item>
+          <t-form-item label="banner" name="bannerUrl">
+            <upload-file :value="formData.bannerUrl" :disabled="true"></upload-file>
+          </t-form-item>
+          <t-form-item label="宣传页" name="jumpUrl">
+            <upload-file :value="formData.jumpUrl" :disabled="true"></upload-file>
+          </t-form-item>
+          <t-form-item style="margin-left: 100px">
+            <t-space size="10px">
+              <t-button theme="primary" type="submit">关闭</t-button>
             </t-space>
           </t-form-item>
         </t-form>
@@ -181,6 +199,7 @@ export default {
       ],
       tableList: [],
       visibleCenter: false,
+      visibleLook: false,
       dataLoading: false,
       value: 'first',
       columns: [
@@ -279,6 +298,7 @@ export default {
     close(){
       this.$refs.formData.reset();
       this.visibleCenter = false
+      this.visibleLook = false
     },
     onSubmit({ validateResult, firstError }) {
       const that = this
@@ -287,7 +307,7 @@ export default {
           bannerName:this.formData.bannerName,
           bannerUrl:this.formData.bannerUrl[0].url,
           jumpUrl:this.formData.jumpUrl[0].url,
-          bannerCode:this.formData.bannerCode?this.formData.bannerCode:''
+          bannerCode:this.formData.bannerCode?this.formData.bannerCode:null
         }).then(res => {
           if(res.status){
             that.$refs.formData.reset();
@@ -320,6 +340,8 @@ export default {
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.paginationInfo.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
@@ -331,6 +353,14 @@ export default {
       this.formData.jumpUrl = [{name:'jump',url:row.jumpUrl}];
       this.formData.bannerUrl =  [{name:'banner',url:row.bannerUrl}];
       this.visibleCenter = true
+    },
+    // 查看
+    rehandleClickLook({text, row}) {
+      this.formData.bannerName = row.bannerName;
+      this.formData.bannerCode = row.bannerCode;
+      this.formData.jumpUrl = [{name:'jump',url:row.jumpUrl}];
+      this.formData.bannerUrl =  [{name:'banner',url:row.bannerUrl}];
+      this.visibleLook = true
     },
     // 删除弹窗
     handleClickDelete(row) {

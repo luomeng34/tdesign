@@ -68,7 +68,7 @@
         <template #op="slotProps">
           <div v-if="slotProps.row.userType!=1">
             <a class="t-button-link" @click="rehandleClickOp(slotProps)">权限变更</a>
-            <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
+            <a class="t-button-link" @click="rehandleClickLook(slotProps)">查看</a>
             <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
           </div>
         </template>
@@ -105,6 +105,25 @@
           </t-form-item>
         </t-form>
       </t-dialog>
+      <!--  查看用户    -->
+      <t-dialog placement="center" header="查看" :visible="visibleLook" :onClose="close" :footer="false">
+        <t-form :data="formData" @submit="close">
+          <t-form-item label="用户名" name="userName">
+            {{formData.userName}}
+          </t-form-item>
+          <t-form-item label="密码" name="userPass">
+            {{formData.userPass}}
+          </t-form-item>
+          <t-form-item label="权限" name="userType">
+           {{formData.userType==2?'管理员':'运营人员'}}
+          </t-form-item>
+          <t-form-item style="margin-left: 100px">
+            <t-space size="10px">
+              <t-button theme="primary" type="submit">关闭</t-button>
+            </t-space>
+          </t-form-item>
+        </t-form>
+      </t-dialog>
     </div>
   </div>
 </template>
@@ -119,7 +138,7 @@ import {
   CONTRACT_TYPE_OPTIONS,
   CONTRACT_PAYMENT_TYPES,
 } from '@/constants';
-import {addUser, getUserList, delUser, updateUser} from "@/api/operation";
+import {addUser, getUserList, delUser, updateUser, selectUserPass} from "@/api/operation";
 const TOTAL = 0
 export default {
   name: 'list-role',
@@ -182,6 +201,7 @@ export default {
       ],
       tableList: [],
       visibleCenter: false,
+      visibleLook: false,
       dataLoading: false,
       formDisabled:false,
       value: 'first',
@@ -282,6 +302,7 @@ export default {
     close(){
       this.$refs.formData.reset();
       this.visibleCenter = false
+      this.visibleLook = false
     },
     onSubmit({ validateResult, firstError }) {
       const that = this
@@ -315,16 +336,37 @@ export default {
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.pagination.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
+    // 权限变更
     rehandleClickOp({text, row}) {
       console.log(text, row);
-      this.formData = row
+      this.formData = JSON.parse(JSON.stringify(row))
       this.dialogTitle = '权限变更'
       this.formDisabled = true
       this.visibleCenter = true
+    },
+    // 查看
+    rehandleClickLook({text, row}) {
+      console.log(text, row);
+
+      selectUserPass({
+        userCode: row.userCode,
+      }).then(res => {
+        if(res.status){
+          this.formData = JSON.parse(JSON.stringify(row))
+          this.formData.userPass = res.msg
+          this.visibleLook = true
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
     },
     handleClickDelete(row) {
       console.log(row)

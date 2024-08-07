@@ -1,5 +1,8 @@
 <template>
-  <router-view :class="[mode]" />
+  <keep-alive>
+    <router-view :class="[mode]" />
+  </keep-alive>
+
 </template>
 
 <script>

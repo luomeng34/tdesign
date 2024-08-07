@@ -61,11 +61,11 @@
         :headerAffixProps="{ offsetTop, container: getContainer }"
       >
         <template #op="slotProps">
-          <a class="t-button-link" v-if="slotProps.row.newsStatus == 1" @click="rehandleClickOp(slotProps)">下架</a>
-          <a class="t-button-link" v-else @click="rehandleClickOp(slotProps)">上架</a>
-          <a class="t-button-link" @click="rehandleClickOp(slotProps)">编辑</a>
-          <a class="t-button-link" @click="rehandleClickOp(slotProps)">查看</a>
-          <a class="t-button-link" @click="handleClickDelete(slotProps)">删除</a>
+          <a class="t-button-link" v-if="slotProps.row.newsStatus == 1" @click="handleClickStatus(slotProps,2)">下架</a>
+          <a class="t-button-link" v-else @click="handleClickStatus(slotProps,1)">上架</a>
+          <a class="t-button-link"  v-if="slotProps.row.newsStatus == 2" @click="rehandleClickOp(slotProps)">编辑</a>
+          <a class="t-button-link" @click="rehandleClickLook(slotProps)">查看</a>
+          <a class="t-button-link"  v-if="slotProps.row.newsStatus == 2" @click="handleClickDelete(slotProps)">删除</a>
         </template>
       </t-table>
       <t-dialog
@@ -76,21 +76,65 @@
         :onCancel="onCancel"
       >
       </t-dialog>
+
+      <t-dialog
+        :header="statusHeader"
+        :visible.sync="statusVisible"
+        @confirm="onConfirmStatus"
+        :onCancel="onCancel"
+      >
+      </t-dialog>
       <!--  新增用户    -->
-      <t-dialog placement="center" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
+      <t-dialog placement="center" width="50%" :header="dialogTitle" :visible="visibleCenter" :onClose="close" :footer="false">
         <t-form :data="formData" :rules="rules" ref="formData" @submit="onSubmit">
-          <t-form-item label="名称" name="bannerName">
-            <t-input v-model="formData.bannerName" placeholder="请输入名称"></t-input>
+          <t-form-item label="标题" name="newsTitle">
+            <t-input v-model="formData.newsTitle" placeholder="请输入名称"></t-input>
           </t-form-item>
-          <t-form-item label="banner" name="bannerUrl">
-            <upload-file :value="formData.bannerUrl"></upload-file>
+          <t-form-item label="副标题" name="newsSubTitle">
+            <t-input v-model="formData.newsSubTitle" placeholder="请输入名称"></t-input>
           </t-form-item>
-          <t-form-item label="宣传页" name="junpUrl">
-            <upload-file :value="formData.junpUrl"></upload-file>
+          <t-form-item label="首页图片" name="newsUrls">
+            <upload-file :max="2" :multiply="true" @uploadChange="uploadChange" :value="formData.newsUrls"></upload-file>
+          </t-form-item>
+          <t-form-item label="简介" name="newsIntroduce">
+            <t-textarea
+              v-model="formData.newsIntroduce"
+              placeholder="请输入简介"
+              name="description"
+              :autosize="{ minRows: 3, maxRows: 5 }"
+            />
+          </t-form-item>
+          <t-form-item label="内容" name="newsContext">
+            <editor :min-height="200" @on-change="editorChange" :value="formData.newsContext"></editor>
           </t-form-item>
           <t-form-item style="margin-left: 100px">
             <t-space size="10px">
               <t-button theme="primary" type="submit">提交</t-button>
+            </t-space>
+          </t-form-item>
+        </t-form>
+      </t-dialog>
+      <!--  查看用户    -->
+      <t-dialog placement="center" width="50%" header="查看" :visible="visibleLook" :onClose="close" :footer="false">
+        <t-form :data="formData" @submit="close">
+          <t-form-item label="标题" name="newsTitle">
+            {{formData.newsTitle}}
+          </t-form-item>
+          <t-form-item label="副标题" name="newsSubTitle">
+            {{formData.newsSubTitle}}
+          </t-form-item>
+          <t-form-item label="首页图片" name="newsUrls">
+            <upload-file :disabled="true" :value="formData.newsUrls"></upload-file>
+          </t-form-item>
+          <t-form-item label="简介" name="newsIntroduce">
+            {{formData.newsIntroduce}}
+          </t-form-item>
+          <t-form-item label="内容" name="newsContext">
+            <editor :min-height="200" @on-change="editorChange" :value="formData.newsContext"></editor>
+          </t-form-item>
+          <t-form-item style="margin-left: 100px">
+            <t-space size="10px">
+              <t-button theme="primary" type="submit">关闭</t-button>
             </t-space>
           </t-form-item>
         </t-form>
@@ -109,9 +153,9 @@ import {
   CONTRACT_TYPE_OPTIONS,
   CONTRACT_PAYMENT_TYPES,
 } from '@/constants';
-import {getNewsList} from "@/api/operation";
-import {addOrUpdateBanner} from "@/api/banner";
+import {delNews, getNewsList, saveNews, updateNewsStatus} from "@/api/operation";
 import UploadFile from "@/components/uploadFile/index.vue";
+import {forEach} from "lodash";
 
 export default {
   name: 'list-table',
@@ -134,7 +178,7 @@ export default {
       statusOptions:[
         {
           label: '下架',
-          value: '0',
+          value: '2',
         },
         {
           label: '上架',
@@ -196,12 +240,41 @@ export default {
       confirmVisible: false,
       deleteIdx: -1,
       visibleCenter: false,
+      visibleLook: false,
       dialogTitle: '',
       formData: {
-        bannerName: '', // 名
-        bannerUrl: undefined, // 角色
-        junpUrl:"" // 密码
+        newsUrls: [], // 名
+        newsTitle: "", // 角色
+        newsSubTitle: "", // 角色
+        newsContext: "", // 角色
+        newsIntroduce:"" // 密码
       },
+      rules: {
+        newsTitle: [
+          {
+            required: true,
+            message: '请输入名称',
+            type: 'error',
+            trigger: 'blur',
+          },
+        ],
+        newsSubTitle: [
+          {
+            required: true,
+            message: '请输入名称',
+            type: 'error',
+            trigger: 'blur',
+          },
+        ],
+        // newsUrls: [
+        //   { required: true, message: '请上传图片', type: 'error',trigger: 'change'},
+        // ],
+        newsIntroduce: [
+          { required: true, message: '请上传图片', type: 'error',trigger: 'change' },
+        ],
+      },
+      statusHeader:'',
+      statusVisible:false
     };
   },
   computed: {
@@ -254,16 +327,38 @@ export default {
     close(){
       this.$refs.formData.reset();
       this.visibleCenter = false
+      this.visibleLook = false
+    },
+    // 图片变化
+    uploadChange(file){
+      console.log(file)
+      this.formData.newsUrls = file
+    },
+    // 富文本
+    editorChange(html, text, quill){
+      this.newsContext = html.html
     },
     onSubmit({ validateResult, firstError }) {
       const that = this
       if (validateResult === true) {
-        addOrUpdateBanner(this.formData).then(res => {
+        this.formData.newsContext = this.newsContext.toString()
+        const urls = []
+        this.formData.newsUrls.forEach((item, index) => {
+          urls.push(item.url)
+        })
+        saveNews({
+          newsUrls: JSON.stringify(urls), // 名
+          newsTitle: this.formData.newsTitle, // 角色
+          newsSubTitle: this.formData.newsSubTitle, // 角色
+          newsContext: this.formData.newsContext, // 角色
+          newsIntroduce:this.formData.newsIntroduce, // 密码
+          newsCode:this.formData.newsCode?this.formData.newsCode:null // 密码
+        }).then(res => {
           if(res.status){
             that.$refs.formData.reset();
             that.visibleCenter = false
             that.getList()
-            this.$message.success('提交成功');
+            this.$message.success(res.msg);
           }
         }).catch((e) => {
           console.log(e);
@@ -277,23 +372,89 @@ export default {
     },
     rehandlePageChange(curr, pageInfo) {
       console.log('分页变化', curr, pageInfo);
+      this.paginationInfo.defaultCurrent = curr.current
+      this.getList()
     },
     rehandleChange(changeParams, triggerAndData) {
       console.log('统一Change', changeParams, triggerAndData);
     },
     rehandleClickOp({text, row}) {
       console.log(text, row);
+      this.formData.newsTitle = row.newsTitle;
+      this.formData.newsSubTitle = row.newsSubTitle;
+      this.formData.newsContext = row.newsContext;
+      this.formData.newsIntroduce =row.newsIntroduce;
+      this.formData.newsCode =row.newsCode;
+      row.newsUrls.forEach((item, index) => {
+        this.formData.newsUrls.push({
+          url:item
+        })
+      })
+
+      this.visibleCenter = true
+    },
+    rehandleClickLook({text, row}) {
+      console.log(text, row);
+      this.formData.newsTitle = row.newsTitle;
+      this.formData.newsSubTitle = row.newsSubTitle;
+      this.formData.newsContext = row.newsContext;
+      this.formData.newsIntroduce =row.newsIntroduce;
+      this.formData.newsCode =row.newsCode;
+      row.newsUrls.forEach((item, index) => {
+        this.formData.newsUrls.push({
+          url:item
+        })
+      })
+
+      this.visibleLook = true
+    },
+    // 上下架弹窗
+    handleClickStatus(row,status) {
+      console.log(row)
+      this.statusHeader = '确定' + (status == 1? '上架':'下架') +'所选资讯吗'
+      this.deleteIdx = row.row.newsCode;
+      this.status = status
+      this.statusVisible = true;
+    },
+    // 上下架确认
+    onConfirmStatus() {
+      // 真实业务请发起请求
+      const that = this
+      updateNewsStatus({
+        newsCode: that.deleteIdx,
+        newsStatus: that.status,
+      }).then(res => {
+        if(res.status){
+          this.statusVisible = false;
+          this.$message.success('操作成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
+      this.resetIdx();
     },
     handleClickDelete(row) {
-      this.deleteIdx = row.rowIndex;
+      this.deleteIdx = row.row.newsCode;
       this.confirmVisible = true;
     },
     onConfirmDelete() {
-      // 真实业务请发起请求
-      this.data.splice(this.deleteIdx, 1);
-      this.pagination.total = this.data.length;
-      this.confirmVisible = false;
-      this.$message.success('删除成功');
+      // 真实业务请发起请求delNews
+      delNews({
+        newsCode: this.deleteIdx,
+      }).then(res => {
+        if(res.status){
+          this.confirmVisible = false;
+          this.$message.success('删除成功');
+          this.getList()
+        }
+      }).catch((e) => {
+        console.log(e);
+      }).finally(() => {
+
+      });
       this.resetIdx();
     },
     onCancel() {
